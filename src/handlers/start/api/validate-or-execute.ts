@@ -6,12 +6,52 @@ import { performAssignment } from "../perform-assignment";
 import { createCommand, createPayload, ShallowContext } from "./helpers/context-builder";
 import { createRepoOctokit, createUserOctokit } from "./helpers/octokit";
 import { parseIssueUrl } from "./helpers/parsers";
+import type { MultiUrlResult } from "./helpers/types";
+
+/**
+ * Handles multiple issue URLs and returns results for each.
+ */
+export async function handleMultiUrlValidateOrExecute({
+  context,
+  mode,
+  issueUrls,
+  jwt,
+}: {
+  context: ShallowContext;
+  mode: "validate" | "execute";
+  issueUrls: string[];
+  jwt: string;
+}): Promise<Response> {
+  const results: MultiUrlResult[] = [];
+
+  for (const issueUrl of issueUrls) {
+    const result = await handleSingleUrl({ context, mode, issueUrl, jwt });
+    const body = await result.clone().json();
+    results.push({ issueUrl, ...body });
+  }
+
+  return Response.json({ results }, { status: 200 });
+}
 
 /**
  * Handles the validate or execute flow for a specific issue.
  * Validates eligibility and optionally performs assignment.
  */
 export async function handleValidateOrExecute({
+  context,
+  mode,
+  issueUrl,
+  jwt,
+}: {
+  context: ShallowContext;
+  mode: "validate" | "execute";
+  issueUrl: string;
+  jwt: string;
+}): Promise<Response> {
+  return handleSingleUrl({ context, mode, issueUrl, jwt });
+}
+
+async function handleSingleUrl({
   context,
   mode,
   issueUrl,

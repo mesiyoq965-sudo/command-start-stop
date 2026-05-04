@@ -13,7 +13,8 @@ export const startQueryParamSchema = T.Object(
         return parsed;
       })
       .Encode((val) => val.toString()),
-    issueUrl: T.String({ minLength: 1 }),
+    issueUrl: T.Optional(T.String({ minLength: 1 })),
+    issueUrls: T.Optional(T.Array(T.String({ minLength: 1 }))),
     environment: T.Optional(T.Union([T.Literal("development"), T.Literal("production")])),
   },
   {
@@ -27,6 +28,14 @@ export type IssueUrlParts = {
   owner: string;
   repo: string;
   issue_number: number;
+};
+
+export type MultiUrlResult = {
+  issueUrl: string;
+  ok: boolean;
+  computed?: StartEligibilityResult["computed"];
+  warnings?: LogReturn[] | null;
+  reasons?: string[] | null;
 };
 
 export type DatabaseUser = {

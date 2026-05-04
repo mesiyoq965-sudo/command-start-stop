@@ -6,7 +6,7 @@ import { extractJwtFromHeader, verifyJwt } from "./helpers/auth";
 import { buildShallowContextObject } from "./helpers/context-builder";
 import { fetchMergedPluginSettings } from "./helpers/get-plugin-config";
 import { StartQueryParams, startQueryParamSchema } from "./helpers/types";
-import { handleValidateOrExecute } from "./validate-or-execute";
+import { handleMultiUrlValidateOrExecute, handleValidateOrExecute } from "./validate-or-execute";
 
 /**
  * Main handler for the public start API endpoint.
@@ -62,7 +62,7 @@ export async function handlePublicStart(honoCtx: HonoContext, env: Env, logger: 
     // Validate environment and parse request query params
     const params = await validateQueryParams(honoCtx, logger);
     if (params instanceof Response) return params;
-    const { issueUrl, userId, environment } = params;
+    const { issueUrl, issueUrls, userId, environment } = params;
 
     // Build context and load merged plugin settings from org/repo config
     const context = await buildShallowContextObject({
@@ -71,6 +71,18 @@ export async function handlePublicStart(honoCtx: HonoContext, env: Env, logger: 
       userId,
       logger,
     });
+
+    // Handle multi-URL case
+    if (issueUrls && issueUrls.length > 0) {
+      context.config = await fetchMergedPluginSettings({
+        env,
+        issueUrl: issueUrls[0],
+        logger,
+        environment,
+        jwt,
+      });
+      return await handleMultiUrlValidateOrExecute({ context, mode, issueUrls, jwt });
+    }
 
     context.config = await fetchMergedPluginSettings({
       env,
